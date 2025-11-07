@@ -95,11 +95,11 @@ gbif_data <- subset(gbif_data, institutionCode != "YPM") %>%
 gbif_data <- gbif_data[,c(33, 1, 22, 23, 28, 10, 51)]
 
 ## load published data
-published_data <- read_xlsx("preps/bargmannia_dataset.xlsx", sheet = "published")
+published_data <- read_xlsx("data/bargmannia_dataset.xlsx", sheet = "published")
 published_data <- published_data[,c(4,2,7,8,6,1,9)]
 
 ## load unpublished data from MBARI
-mbari <- read_tsv("preps/Bargmannia_subfields.tsv")
+mbari <- read_tsv("data/Bargmannia_subfields.tsv")
 mbari <- mbari %>%
   mutate(species = ifelse(Concept=="Bargmannia", "Bargmannia sp.", 
                         ifelse(Concept == "Bargmannia amoena", "Bargmannia pyrosa", Concept)),
