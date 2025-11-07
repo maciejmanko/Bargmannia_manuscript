@@ -1,0 +1,4 @@
+"","Parameter",".y.","n","statistic","df","p","method"
+"1","Oxygen","Value",105,54.7832970306796,5,1.45e-10,"Kruskal-Wallis"
+"2","Salinity","Value",105,53.6875581687718,5,2.43e-10,"Kruskal-Wallis"
+"3","Temperature","Value",105,63.1563041687264,5,2.7e-12,"Kruskal-Wallis"

@@ -1,0 +1,28 @@
+# Rstudio data
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+# Other files
+*.html
+*.xlsx
+*.docx
+*.pptx
+*.pdf
+*.tmp
+
+# Other subdirectories
+back_up_data/
+bargFGs/
+distribution/
+drawings/
+Figures/
+JBS_poster/
+molecular/
+morphology/
+morphometrics/
+mtgenome/
+nematocytes/
+specimen_data/
+preps/

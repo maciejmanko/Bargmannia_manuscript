@@ -1,0 +1,16 @@
+"","Parameter","Species 1","Species 2","Z statistic","Adjusted p-value"
+"1","Oxygen","Bargmannia elongata","Bargmannia profunda",5.813,0
+"2","Oxygen","Bargmannia elongata","Bargmannia pyrosa",4.99,0
+"3","Oxygen","Bargmannia elongata","Bargmannia stenotes",3.871,0.001
+"4","Oxygen","Bargmannia lata","Bargmannia profunda",4.094,0.001
+"5","Oxygen","Bargmannia lata","Bargmannia pyrosa",2.906,0.04
+"6","Salinity","Bargmannia elongata","Bargmannia lata",3.235,0.013
+"7","Salinity","Bargmannia elongata","Bargmannia profunda",5.951,0
+"8","Salinity","Bargmannia elongata","Bargmannia pyrosa",4.429,0
+"9","Salinity","Bargmannia elongata","Bargmannia stenotes",4.17,0
+"10","Salinity","Bargmannia lata","Bargmannia profunda",3.411,0.008
+"11","Temperature","Bargmannia elongata","Bargmannia lata",-3.173,0.017
+"12","Temperature","Bargmannia elongata","Bargmannia profunda",-6.188,0
+"13","Temperature","Bargmannia elongata","Bargmannia pyrosa",-5.559,0
+"14","Temperature","Bargmannia elongata","Bargmannia stenotes",-4.122,0
+"15","Temperature","Bargmannia lata","Bargmannia profunda",-3.675,0.003

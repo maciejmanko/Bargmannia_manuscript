@@ -1,0 +1,587 @@
+---
+title: "Bargmannia_morphometrics"
+author: "MaciejManko"
+date: "2025-02-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      tidy.opts = list(width.cutoff = 60))
+set.seed(123)
+```
+
+# Setup
+## Load packages
+```{r, echo = FALSE, warning=FALSE}
+library(ape)
+library(phytools)
+library(ggrepel)
+library(ggpubr)
+library(rstatix)
+library(ggtree)
+library(readr)
+library(readxl)
+library(purrr)
+library(Morpho) # for meaningful PCA
+library(geomorph)
+library(cowplot) # arranging figs
+library(tidyverse)
+library(PMCMRplus) # for kwAllPairsDunnTest
+library(factoextra)
+```
+
+## Setup global plot theme
+```{r}
+# Theme for larger plots
+th <-   theme(panel.background = element_rect(fill = "white"),
+        panel.grid.major.x = element_blank(), 
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        panel.grid.minor.y = element_blank(),
+        axis.text.x = element_text(size=8, colour ="black"),
+        axis.text.y = element_text(size=8, colour ="black"),
+        axis.title=element_text(size=9, face="bold"),
+        legend.position="none",
+        axis.line = element_line(colour = "black"),
+        strip.background = element_rect(colour = "black", fill = "white", linewidth = 1),
+        strip.text = element_text(size = 8),
+        panel.spacing = unit(1, "lines"))
+```
+
+## Set up color palettes 
+```{r}
+sp.palette.abb <- c("B. lata" = "#F781BF", 
+             "B. profunda" = "#999999",
+             "B. marlena" = "#984EA3",
+             "B. pyrosa" = "#E41A1C",
+             "B. stenotes" ="#ffca13",
+             "B. amoena" = "#4DAF4a",
+             "B. elongata" = "#377EB8",
+             "B. gigas" = "#A65628",
+             "B. sp." = "black")
+```
+
+## Load data
+```{r, message = FALSE}
+# landmarks
+tps_data <- readland.tps("data/landmark_positions.tps", specID = "imageID")
+
+# metadata
+meta_data <- read_tsv("data/morphometrics_meta_data.txt")
+
+# Bargmannia phylogeny based on nuclear and mitochondrial markers
+barg.tree <- read.tree("data/Bargmannia_master_tree.nex.treefile")
+```
+
+## Define wireframes
+```{r}
+# wireframe for entire nectophore
+necto_wire <- matrix(c(
+  1,3, 3,5, 5,6, 6,4, 4,2, 2,3, 6,7, 7,12, 12,8, 8,6, 8,9, 9,10, 9,11, 12,13, 13,15, 12,14, 14,16, 16,15, 15,1,
+  6,7, 7,12, 12,20, 20,19, 19,17, 19,18, 18,6
+  ), byrow=TRUE, ncol=2)
+```
+
+## Function to visualize shape change
+```{r}
+# This function ingests PCA object and then creates a figure depicting shape change vectors along given PCA axis plotted on maximum shape for a given axis
+
+plot_morpho_change <- function(PCA.object, axis_number, Procrustes.object, wireframe) {
+  # Retrive PC axis data
+  PC_axis <- PCA.object$x[,axis_number]
+  # Retrive Procrustes coordinates
+  coords <- Procrustes.object$coords
+  # Predict shape change along the selected PC axis
+  preds <- shape.predictor(coords, x = PC_axis, Intercept = FALSE, 
+                            pred.min = min(PC_axis),  
+                            pred.max = max(PC_axis))
+  
+  # Convert predictions to data frames
+  landmarks_min <- as.data.frame(preds$pred.min)
+  landmarks_max <- as.data.frame(preds$pred.max)
+  
+  # Add landmark indices and PC labels
+  landmarks_min$ID <- 1:nrow(landmarks_min)
+  landmarks_min$PC <- "min"
+  landmarks_max$ID <- 1:nrow(landmarks_max)
+  landmarks_max$PC <- "max"
+  
+  # Merge min and max shapes into a single dataframe
+  landmarks_df <- rbind(landmarks_min, landmarks_max)
+
+  # Convert wireframe to dataframe
+  wireframe_df <- data.frame(wireframe)
+  colnames(wireframe_df) <- c("V1", "V2")
+  
+  # Merge wireframe with landmark coordinates
+  wireframe_plot <- wireframe_df %>%
+    left_join(landmarks_max, by = c("V1" = "ID")) %>%
+    rename(Y1 = Y, X1 = X) %>%
+    left_join(landmarks_max, by = c("V2" = "ID")) %>%
+    rename(Y2 = Y, X2 = X)
+  
+  # Create ggplot with shape change vectors and wireframe
+  change_plot <- ggplot(filter(landmarks_df, PC == "min"), aes(x = Y, y = X)) +
+    # Wireframe connections
+    geom_segment(data = wireframe_plot, 
+                 aes(x = Y1, y = X1, xend = Y2, yend = X2), 
+                 color = "lightgray", linewidth = 0.5) +
+    
+    # Morphological change vectors
+    geom_segment(data = landmarks_df %>% 
+                   pivot_wider(names_from = PC, 
+                               values_from = c(Y, X)), 
+                 aes(x = Y_min, y = X_min, xend = Y_max, yend = X_max),
+                 linewidth = 0.4,
+                 arrow = arrow(length = unit(0.15, "cm"), type = "closed"),
+                 color = "black") +
+    
+    # Plot landmarks (starting shape)
+    geom_point(shape = 21, fill = "darkgrey", size = 1.8) +
+    
+    # Aesthetic adjustments
+    coord_fixed() +
+    theme(axis.line = element_blank(),
+          axis.title = element_blank(), 
+          axis.text = element_blank(), 
+          axis.ticks = element_blank(),
+          panel.background = element_rect(fill = "white"),
+          panel.grid.major.x = element_blank(), 
+          panel.grid.minor.x = element_blank(),
+          panel.grid.major.y = element_blank(), 
+          panel.grid.minor.y = element_blank())
+  
+  filename <- paste0(deparse(substitute(PCA.object)), "_PC", axis_number, ".pdf")
+  ggsave(filename = filename, plot = change_plot, device = "pdf",
+         width = 5, height = 5, units = "cm")
+  
+  return(change_plot)
+  
+}
+
+```
+
+# Analysis
+## Retrive nectophore dimensions
+```{r, echo=FALSE}
+# to assure proper XY alignment, knowing that Y extent is always larger in nectophores
+tps_data2 <- tps_data
+apply(tps_data2, 3, function(spec) range(spec[,1]) > range(spec[,2]))
+
+for (i in 1:dim(tps_data2)[3]) {
+  if (diff(range(tps_data2[,1,i])) < diff(range(tps_data2[,2,i]))) {
+    tps_data2[,,i] <- tps_data[,c(2,1),i]  # Swap X and Y back
+  }
+}
+# Nectophore height (distance from mouth plate indentation (1) to the thrust block tip (9))
+nectophore_height <- abs(tps_data2[1,1,] - tps_data2[9,1,])
+
+# Nectophore height (distance from lm7 urc insertion to rc, to lm19 urc bent to lower surface)
+nectosac_height <- abs(tps_data2[19,1,] - tps_data2[7,1,])
+```
+
+## general procrustes
+```{r}
+# Generalized Procrustes analysis
+gpa <- gpagen(tps_data)
+
+# Invert XY and take negative of Y to align nectophore longer axis along Y
+gpa$coords <- gpa$coords[, c(2, 1), ]
+gpa$coords[,2,] <- gpa$coords[,2,] * -1
+```
+
+## Geomorph dataframe
+```{r}
+# convert to geomorph_dataframe
+species_lookup <- setNames(meta_data$Species, meta_data$Image_ID)
+image_ids <- dimnames(gpa$coords)[[3]]
+species_info <- species_lookup[image_ids]
+
+gpa.gdf <- geomorph.data.frame(shape=gpa$coords, 
+                               species = species_info, 
+                               ind = image_ids,
+                               Csize = gpa$Csize,
+                               nectophore_height = nectophore_height,
+                               nectosac_height = nectosac_height,
+                               necto_rate = nectophore_height/nectosac_height)
+
+# quick check of point assignment
+plotAllSpecimens(gpa$coords, links = necto_wire)
+
+# identify outliers - this indicated small nectophores to be outliers across species, but these were retained
+plotOutliers(gpa$coords, inspect.outliers = T)
+```
+
+## Symmetry analysis
+```{r}
+landmark.pairs <- matrix(c(2, 16, 
+                            3, 15, 
+                            4, 14, 
+                            5, 13, 
+                            6, 12, 
+                            10, 11, 
+                            18, 20), ncol = 2, byrow = TRUE)
+nectophore.sym <- bilat.symmetry(A = shape, 
+                                 ind = ind, 
+                                 object.sym = TRUE, 
+                                 land.pairs = landmark.pairs,
+                                 data = gpa.gdf,
+                                 RRPP = TRUE)
+
+# Extract ANOVA table 
+anova_df <- as.data.frame(nectophore.sym$shape.anova)
+anova_df <- cbind(Term = rownames(anova_df), anova_df)
+# Save to CSV file
+write.csv(anova_df, "results/nectophore_shape_anova.csv", row.names = FALSE)
+
+# visualize symmetric and asymmetric components
+plotAllSpecimens(nectophore.sym$symm.shape)
+plotAllSpecimens(nectophore.sym$asymm.shape)
+
+# Extract mean symmetric and asymmetric shapes
+mean_symm <- mshape(nectophore.sym$symm.shape)
+mean_asymm <- mshape(nectophore.sym$asymm.shape)
+
+# Plot the symmetric (reference) vs asymmetric (target) shape
+plotRefToTarget(mean_symm, mean_asymm,
+                method = "vector",   # or "TPS" for deformation grids
+                mag = 3,             # magnification factor for visibility
+                gridPars = gridPar(pt.bg = "lightgray", pt.size = 1),
+                rgl = FALSE)
+```
+
+## PCA
+```{r}
+# PCA on all data
+barg.PCA <- gm.prcomp(gpa$coords)
+pca.geo <- prcomp(two.d.array(gpa$coords)) # for axes loading
+barg.PCA
+# generate mean shape
+mean.barg <- mshape(gpa$coords)
+mean.shape <- gpa$consensus 
+
+# extract PCA scores and merge with metadata
+pca_scores <- as.data.frame(barg.PCA$x)  # Convert PCA scores to a data frame
+pca_scores <- rownames_to_column(pca_scores)
+colnames(pca_scores)[1] <- "Image_ID"
+pca_data <- merge(pca_scores, meta_data, by=c("Image_ID"))
+
+# append length of nectophore
+pca_data$nectophore_height <- nectophore_height
+pca_data$nectophore_height <- nectophore_height
+
+# Screeplot
+summarydf <- summary(barg.PCA)
+summarydf <- data.frame(matrix(unlist(summarydf), ncol=3, byrow=TRUE))
+summarydf$PC <- paste0("PC", 1:36)
+colnames(summarydf) <- c("eigenvalues", "proportion of variance", "cummulative proportions", "PC")
+
+summarydf$PC <- factor(summarydf$PC, levels = summarydf$PC)
+screeplot <- ggplot(summarydf[1:10,], aes(x=PC, y=`proportion of variance`))+
+  geom_bar(stat="identity", fill = "darkgrey")+
+  geom_point(size = 3, color = "black") +
+  geom_line(aes(group = 1), color = "black", linetype = "dashed")+
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1))+
+  ylab("Proportion of explained variance") +
+  xlab("PC axis")+
+  th
+
+ggsave(filename = "results/Fig_screeplot.tiff", plot = screeplot, device = "tiff",
+       width = 9, height = 9, units = "cm")
+```
+
+### PC plots 1-4
+```{r}
+# create PC1-PC2 scatter plot
+barg.pca12 <- ggplot(pca_data, aes(x = Comp1, y = Comp2, 
+                                  color = Species))+
+  geom_point(shape = 16, size = 2, alpha = 0.75) +
+  scale_color_manual(values = sp.palette.abb)+
+  th+
+  theme(legend.position = "none")+
+  xlab(paste0(summarydf$PC[1], " (", round(summarydf$`proportion of variance`[1] * 100, 2), "%)"))+
+  ylab(paste0(summarydf$PC[2], " (", round(summarydf$`proportion of variance`[2] * 100, 2), "%)"))+
+  theme( axis.text.x = element_text(size=7, colour ="black"),
+        axis.text.y = element_text(size=7, colour ="black"),
+        axis.title=element_text(size=8, face="bold"),
+        strip.text = element_text(size = 7))
+
+
+# create PC3-PC4 scatter plot
+barg.PCA34 <- ggplot(pca_data, aes(x = Comp3, y = Comp4, 
+                                  color = Species))+
+    geom_point(shape = 16, size = 2, alpha = 0.75) +
+  scale_color_manual(values = sp.palette.abb)+
+  th+
+  theme(legend.position = "none")+
+  xlab(paste0(summarydf$PC[3], " (", round(summarydf$`proportion of variance`[3] * 100, 2), "%)"))+
+  ylab(paste0(summarydf$PC[4], " (", round(summarydf$`proportion of variance`[4] * 100, 2), "%)"))+
+  theme( axis.text.x = element_text(size=7, colour ="black"),
+        axis.text.y = element_text(size=7, colour ="black"),
+        axis.title=element_text(size=8, face="bold"),
+        strip.text = element_text(size = 7))
+
+
+```
+
+### Retrive individual PCA shapes
+```{r}
+plot_morpho_change(barg.PCA, 1, gpa, necto_wire)
+plot_morpho_change(barg.PCA, 2, gpa, necto_wire)
+plot_morpho_change(barg.PCA, 3, gpa, necto_wire)
+plot_morpho_change(barg.PCA, 4, gpa, necto_wire)
+```
+
+### Axes loading
+```{r}
+axes_list <- 1:4
+contrib_list <- list()
+
+for (axis in axes_list) {
+  pca.contrib <- fviz_contrib(pca.geo, choice = "var", axes = axis)
+  LM_contrib <- data.frame(LM = as.character(1:(nrow(pca.contrib$data)/2)), 
+                           contrib = sapply(1:(nrow(pca.contrib$data)/2), 
+                                            function(i) sum(pca.contrib$data[(i*2-1):(i*2),]$contrib)))
+  colnames(LM_contrib)[2] <- paste0("pca.contrib", axis)
+  contrib_list[[axis]] <- LM_contrib
+}
+
+pca.loading <- Reduce(function(x, y) merge(x, y, by = "LM"), contrib_list)
+
+write.csv(pca.loading, "results/pca_loading.csv")
+
+```
+
+## Phylomorphospace
+### Read and update tree
+```{r}
+# reroot multigene phylogeny
+plot(barg.tree, no.margin=TRUE,edge.width=2,cex=0.7) 
+barg.tree.reroot <- reroot(barg.tree, node = which(barg.tree$tip.label == "YPM-IZ-111816"))
+
+# retain single tip per Bargmannia species
+retain.tip <- c("D725-D8", "SRR23143264", "D961-D3", "D666-D10", "D611-D6", "D669-SS5","Bargmannia_elongata_T1109D2")
+barg.trunc.tree <- keep.tip(barg.tree.reroot, retain.tip)
+plot(barg.trunc.tree)
+
+# relabel tips 
+barg.trunc.tree$tip.label[barg.trunc.tree$tip.label=="D725-D8"] <- "B. marlena"
+barg.trunc.tree$tip.label[barg.trunc.tree$tip.label=="SRR23143264"] <- "B. lata"
+barg.trunc.tree$tip.label[barg.trunc.tree$tip.label=="D961-D3"] <- "B. profunda"
+barg.trunc.tree$tip.label[barg.trunc.tree$tip.label=="D666-D10"] <- "B. stenotes"
+barg.trunc.tree$tip.label[barg.trunc.tree$tip.label=="D611-D6"] <- "B. pyrosa"
+barg.trunc.tree$tip.label[barg.trunc.tree$tip.label=="D669-SS5"] <- "B. amoena"
+barg.trunc.tree$tip.label[barg.trunc.tree$tip.label=="Bargmannia_elongata_T1109D2"] <- "B. elongata"
+```
+
+### Mean shapes for phylomorphospecies
+```{r}
+# split GPA file by species
+coords.by.species <- coords.subset(gpa.gdf$shape, group =gpa.gdf$species)
+
+# mean shape by species
+mshape.by.species <- lapply(coords.by.species, mshape)
+
+# convert list to array
+species.names <- names(mshape.by.species)
+mshape.by.species <- array(
+  data = unlist(mshape.by.species),
+  dim = c(dim(mshape.by.species[[1]])[1], 2, length(species.names)),
+  dimnames = list(NULL,NULL,species.names)
+)
+
+all.by.species <- array(
+  data = unlist(coords.by.species),
+  dim = c(dim(coords.by.species[[1]])[1], 2, length(species.names)),
+  dimnames = list(NULL,NULL,species.names)
+)
+```
+
+### Plot - phylo
+```{r}
+# PCA with phylogenetic element 
+pca.w.phylo2 <- gm.prcomp(mshape.by.species, phy = barg.trunc.tree, align.to.phy = TRUE)
+phylo.plot <- plot(pca.w.phylo2, phylo = TRUE)
+phylo.sum <- summary(pca.w.phylo2)
+
+# retrive necessary data for ggplotting
+phylo_proj <- as.data.frame(phylo.plot[["phylo"]][["phy.pcdata"]])
+phylo_proj$species <- rownames(phylo_proj)
+phylo_proj$species <- gsub("\\.+", ". ", phylo_proj$species)
+phylo_proj$Type <- ifelse(1:13 <= 7, "Species", "Node")
+phylo_proj$edgeID <- c(1:13)
+
+# data for edge connections
+connections_df <- as.data.frame(phylo.plot[["phylo"]][["phy"]][["edge"]])
+connections <- merge(connections_df, phylo_proj, by.x = "V1", by.y = "edgeID")
+connections <- merge(connections, phylo_proj, by.x = "V2", by.y = "edgeID", suffixes = c("_V1", "_V2"))
+
+# generate plots 
+phylo.PCA <- ggplot() +
+  geom_segment(data = connections, 
+               aes(x = Comp1_V1, y = Comp2_V1, xend = Comp1_V2, yend = Comp2_V2), 
+               color = "black",
+               linewidth=0.2) +
+  geom_point(data = subset(phylo_proj, Type == "Node"), 
+             aes(x = Comp1, y = Comp2), 
+             color = "black", 
+             fill = "white",
+             shape = 21,
+             size = 0.8)+
+  geom_point(data = subset(phylo_proj, Type == "Species"),
+             aes(x = Comp1, y = Comp2, color = species), size = 2) +
+  geom_text_repel(data = subset(phylo_proj, Type == "Species"),
+                  aes(x = Comp1, y = Comp2,
+                      label = species), size = 2,
+                  fontface = "italic",
+                  nudge_x = -.02,
+                  min.segment.length = Inf) +
+  scale_color_manual(values = sp.palette.abb)+
+  th + 
+  xlab(paste0("PC1 (", round(phylo.sum[["PC.summary"]][["Comp1"]][[2]] * 100, 2), "%)"))+
+  ylab(paste0("PC2 (", round(phylo.sum[["PC.summary"]][["Comp2"]][[2]] * 100, 2), "%)"))+
+  xlim(-0.11, 0.2)+
+  theme( axis.text.x = element_text(size=7, colour ="black"),
+        axis.text.y = element_text(size=7, colour ="black"),
+        axis.title=element_text(size=8, face="bold"),
+        strip.text = element_text(size = 7))
+```
+
+
+## Allometry
+```{r}
+size.model <- procD.lm(shape~species, data = gpa.gdf, iter = 999)
+summary(size.model)
+
+size.model1 <- procD.lm(shape~nectophore_height+species, data = gpa.gdf, iter = 999)
+summary(size.model1)
+
+size.model2 <- procD.lm(shape~nectophore_height*species, data = gpa.gdf, iter = 999)
+summary(size.model2)
+
+anova(size.model, size.model1, size.model2)
+
+allometry.sp.pw <- pairwise(fit = size.model2, 
+                         fit.null = size.model,
+                         groups = gpa.gdf$species)
+
+# generate heatmap of p across model 
+heat_data <- (summary(allometry.sp.pw))
+heat_data2 <- as.data.frame(heat_data["summary.table"])
+heat_data2$species<- rownames(heat_data2)
+
+heat_data2[c('Species1', 'Species2')] <- str_split_fixed(heat_data2$species, ':', 2)
+
+heatmap.allom <- ggplot(heat_data2, aes(x = Species1, y = Species2, fill = `summary.table.Pr...d`)) +
+  geom_tile() +
+  scale_fill_gradient(low = "grey", high = NA, na.value = NA) +
+  geom_text(aes(label = sprintf("%.2f",`summary.table.Pr...d`)), color = "black", size = 3)+
+  th
+heatmap.allom
+
+
+x<-plotAllometry(fit=size.model2, size = (gpa.gdf$nectophore_height),
+              col = as.factor(gpa.gdf$species), method="PredLine")
+
+
+allom.data <- as.data.frame(x[["plot_args"]][["col"]])
+allom.data$Reg.Score <- x[["RegScore"]]
+allom.data$PredLine <- x[["PredLine"]]
+allom.data$Csize <- gpa.gdf$Csize
+allom.data$nectophore_height <- nectophore_height
+allom.data$specimen <- meta_data$Specimen
+allom.data$photo <- meta_data$Image_ID
+colnames(allom.data) <- c("species", "reg.score", "predline", "csize", 
+                          "nectophore_height", "specimen", "photo")
+tail(allom.data$nectophore_height)
+tail(gpa.gdf$nectophore_height)
+allometry.plot <- ggplot(allom.data, 
+                         aes(x=log(nectophore_height), y=predline, color = species))+
+  geom_point(shape=16, size = 2, alpha=0.75) +
+  th+
+  scale_color_manual(values=sp.palette.abb)+
+  xlab("log(Nectophore height [mm])")+
+  ylab("Predicted shape")+
+  theme( axis.text.x = element_text(size=7, colour ="black"),
+        axis.text.y = element_text(size=7, colour ="black"),
+        axis.title=element_text(size=8, face="bold"),
+        strip.text = element_text(size = 7))
+
+allom.test <- procD.lm(shape ~ log(nectophore_height) * species, data = gpa.gdf)
+
+allom.summary <- summary(allom.test)
+allom.test.table <- as.data.frame(allom.summary$table)
+write.csv(allom.test.table, "results/allom.test.csv")
+```
+
+## Nectophore:nectosac
+```{r}
+bar_data <- as.data.frame(species_info)
+bar_data$nectophore <- nectophore_height
+bar_data$nectosac <- nectosac_height                               
+bar_data <- bar_data %>%
+  mutate(necto_rate = nectophore/nectosac)
+
+
+nectophore.dim <- ggplot(bar_data, aes(x=species_info, y=necto_rate, color=species_info, fill=species_info))+
+  stat_boxplot(geom ='errorbar', width = 0.4, color = "black")+
+  geom_boxplot(outlier.color = NA, color="black", outlier.size = NA, alpha = .2)+
+  geom_jitter(size = 2, aes(color = species_info, alpha = .7), width = 0.3)+
+  scale_color_manual(values=sp.palette.abb)+
+  scale_fill_manual(values=sp.palette.abb)+
+  th+
+  theme( axis.text.x = element_text(size=7, colour ="black", face = "italic"),
+        axis.text.y = element_text(size=7, colour ="black"),
+        axis.title=element_text(size=8, face="bold"),
+        strip.text = element_text(size = 7))+
+  ylab("nectophore : nectosac")+
+  xlab("Species")
+
+# run Shapiro-Wilk test for normality
+shapiro_results_nec_nec <- bar_data %>%
+  group_by(species_info) %>%
+  summarise(p_value = shapiro.test(necto_rate)$p.value)
+write.csv(shapiro_results_nec_nec, "results/shapiro_results_nec_nec.csv")
+
+# run Kruskal-Wallis test with Dunn post-hoc between cell types
+stat.test_nec_bec <- bar_data %>%
+  kruskal_test(necto_rate ~ species_info)
+
+write.csv(stat.test_nec_bec, "results/KWtest_nect_necto.csv")
+
+dunn.test_nec_nec <- bar_data %>%
+  dunn_test(necto_rate ~ species_info, p.adjust.method = "holm") %>%
+  select(group1, group2, statistic, p.adj) %>%
+  mutate(
+    statistic = round(statistic, 3),
+    p.adj = round(p.adj, 3)
+  ) %>%
+  filter(p.adj < 0.05) %>%
+  rename('Species 1' = group1,
+         'Species 2' = group2,
+         'Z statistic' = statistic,
+         'Adjusted p-value' = p.adj)
+write.csv(dunn.test_nec_nec, "results/dunn_test_nect_necto.csv")
+
+
+
+```
+
+## Export figure
+```{r}
+row1 <- plot_grid(barg.pca12, barg.PCA34,
+                  ncol = 2, labels = c("A", "B"), label_size = 8)
+row2 <- plot_grid(nectophore.dim,
+                  ncol = 1, labels = "C", label_size = 8)
+row3 <- plot_grid(allometry.plot, phylo.PCA,
+                  ncol = 2, labels = c("D", "E"), label_size = 8)
+fig_all3 <- plot_grid(row1, row2, row3,
+                      ncol = 1,  
+                      rel_heights = c(1.3, 0.8, 0.8)) +  # adjust as needed)+
+  theme(plot.background = element_rect(fill = "white", colour = NA))
+
+ggsave(filename = "results/morphometric_figure.pdf", plot = fig_all3, device = "pdf",
+       width = 18, height = 18 , units = "cm")
+
+```

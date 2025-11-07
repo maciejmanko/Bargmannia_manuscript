@@ -1,0 +1,38 @@
+"","Nematocyst type","Species 1","Species 2","Z statistic","Adjusted p-value"
+"1","large haplonemes","B. amoena","B. elongata",-4.34,0
+"2","large haplonemes","B. amoena","B. lata",4.33,0
+"3","large haplonemes","B. amoena","B. marlena",5.741,0
+"4","large haplonemes","B. amoena","B. pyrosa",-2.928,0.031
+"5","large haplonemes","B. elongata","B. lata",8.67,0
+"6","large haplonemes","B. elongata","B. marlena",10.081,0
+"7","large haplonemes","B. elongata","B. profunda",4.32,0
+"8","large haplonemes","B. elongata","B. stenotes",3.35,0.008
+"9","large haplonemes","B. lata","B. profunda",-4.35,0
+"10","large haplonemes","B. lata","B. pyrosa",-7.257,0
+"11","large haplonemes","B. lata","B. stenotes",-2.781,0.038
+"12","large haplonemes","B. marlena","B. profunda",-5.761,0
+"13","large haplonemes","B. marlena","B. pyrosa",-8.669,0
+"14","large haplonemes","B. marlena","B. stenotes",-3.779,0.002
+"15","large haplonemes","B. profunda","B. pyrosa",-2.908,0.031
+"16","small haplonemes","B. amoena","B. lata",6.717,0
+"17","small haplonemes","B. amoena","B. marlena",9.611,0
+"18","small haplonemes","B. amoena","B. pyrosa",3.834,0.001
+"19","small haplonemes","B. elongata","B. lata",8.684,0
+"20","small haplonemes","B. elongata","B. marlena",11.715,0
+"21","small haplonemes","B. elongata","B. profunda",3.873,0.001
+"22","small haplonemes","B. elongata","B. pyrosa",5.816,0
+"23","small haplonemes","B. elongata","B. stenotes",2.913,0.035
+"24","small haplonemes","B. lata","B. profunda",-5.098,0
+"25","small haplonemes","B. lata","B. stenotes",-2.923,0.035
+"26","small haplonemes","B. marlena","B. profunda",-7.842,0
+"27","small haplonemes","B. marlena","B. pyrosa",-5.03,0
+"28","small haplonemes","B. marlena","B. stenotes",-4.496,0
+"29","stenoteles","B. amoena","B. lata",7.415,0
+"30","stenoteles","B. amoena","B. marlena",5.427,0
+"31","stenoteles","B. elongata","B. lata",4.943,0
+"32","stenoteles","B. elongata","B. marlena",3.341,0.012
+"33","stenoteles","B. lata","B. pyrosa",-5.716,0
+"34","stenoteles","B. lata","B. stenotes",-7.129,0
+"35","stenoteles","B. marlena","B. pyrosa",-3.525,0.006
+"36","stenoteles","B. marlena","B. stenotes",-5.488,0
+"37","stenoteles","B. profunda","B. stenotes",-2.966,0.039

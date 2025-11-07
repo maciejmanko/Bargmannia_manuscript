@@ -1,0 +1,4 @@
+"","cell_type",".y.","n","statistic","df","p","method"
+"1","large haplonemes","volume_mm3",190,155.643854595348,6,4.95e-31,"Kruskal-Wallis"
+"2","small haplonemes","volume_mm3",231,189.378545380618,6,3.45e-38,"Kruskal-Wallis"
+"3","stenoteles","volume_mm3",105,96.2927664525729,6,1.49e-18,"Kruskal-Wallis"

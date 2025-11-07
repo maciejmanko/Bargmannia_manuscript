@@ -1,0 +1,11 @@
+"","Species 1","Species 2","Z statistic","Adjusted p-value"
+"1","Bargmannia amoena","Bargmannia lata",5.444,0
+"2","Bargmannia amoena","Bargmannia marlena",3.456,0.007
+"3","Bargmannia amoena","Bargmannia profunda",6.558,0
+"4","Bargmannia amoena","Bargmannia pyrosa",6.414,0
+"5","Bargmannia amoena","Bargmannia stenotes",4.916,0
+"6","Bargmannia elongata","Bargmannia lata",4.444,0
+"7","Bargmannia elongata","Bargmannia marlena",3.016,0.031
+"8","Bargmannia elongata","Bargmannia profunda",5.875,0
+"9","Bargmannia elongata","Bargmannia pyrosa",5.454,0
+"10","Bargmannia elongata","Bargmannia stenotes",4.369,0

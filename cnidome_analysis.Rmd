@@ -1,9 +1,10 @@
 ---
-title: "cnidome"
+title: "cnidome analysis"
 author: "MaciejManko"
 date: "2025-10-23"
 output: html_document
 ---
+
 # Setup
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,
@@ -16,12 +17,11 @@ set.seed(123)
 library(readxl)
 library(tidyverse)
 library(PMCMRplus)
-
+library(rstatix)
 ```
 
 ## Setup global plot theme
 ```{r}
-# Theme for larger plots
 th.small <-   theme(panel.background = element_rect(fill = "white"),
         panel.grid.major.x = element_blank(), 
         panel.grid.minor.x = element_blank(),
@@ -52,14 +52,10 @@ sp.palette.abb <- c("B. lata" = "#F781BF",
 
 ## Load data
 ```{r, message = FALSE}
-# nematocysts dimensions
-nem_dim_data <- read_xlsx("nematocytes/gen-measurements.xlsx", sheet="final_measurements")
-
-# stenotele numbers
-sten_num <- read_xlsx("nematocytes/gen-measurements.xlsx", sheet="sten_number")
+nem_dim_data <- read_xlsx("data/nematocysts_measurements.xlsx", sheet="final_measurements")
 ```
 
-## Nematocystes
+## Initial calculations (volume and dimensions)
 ```{r}
 # calculate volume assuming that large haploneme and stenoteles are prolate spheroid and small haploneme is a sphere. This chunk includes sanity check for length>width for ellipsoids. 
 
@@ -79,6 +75,7 @@ nem_dim <- nem_dim_data %>%
   ) %>%
   mutate(volume_mm3 = volume/1e9)
 
+# generate summaries for each nematocyst type
 nem_sum <- nem_dim %>%
   group_by(species, cell_type) %>%
   summarize(N = n(),
@@ -98,26 +95,24 @@ nem_sum <- nem_dim %>%
          'Mean volume [µm^-3]' = mean_volume,
          'SD volume [µm^-3]' = sd_volume,)
 
-write.csv(nem_sum, "summary_cell_measurements.csv")
+write.csv(nem_sum, "results/summary_cell_measurements.csv")
 ```
 
-
-
+## Statistical tests
 ```{r}
 # test data distribution
 shapiro_results_nems <- nem_dim %>%
   group_by(species, cell_type) %>%
   summarise(p_value = shapiro.test(volume)$p.value)
 
-write.csv(shapiro_results_nems, "shapiro_results_nems.csv")
+write.csv(shapiro_results_nems, "results/shapiro_nem_volume.csv")
 
 # run Kruskal-Wallis test with Dunn post-hoc between cell types
 KW_nems <- nem_dim %>%
   group_by(cell_type) %>%
-  kruskal_test(volume_mm3 ~ species) %>%
-  add_significance()
+  kruskal_test(volume_mm3 ~ species)
 
-write.csv(KW_nems, "KW_nems.csv")
+write.csv(KW_nems, "results/KW_nem_volume.csv")
 
 dunn_test_nems <- nem_dim %>%
   group_by(cell_type) %>%
@@ -134,12 +129,12 @@ dunn_test_nems <- nem_dim %>%
          'Adjusted p-value' = p.adj,
          'Nematocyst type' = cell_type)
 
-write.csv(dunn_test_nems, "nematocyte_volume_dunntest.csv")
+write.csv(dunn_test_nems, "results/dunn_posthoc_nem_volume.csv")
 ```
 
+## Plot nematocytes volume
 ```{r}
-# plot nematocytes volumes
-nem_dim.p <- ggplot(nem_dim, aes(y=volume_mm3, x= species, color=species, fill = species))+
+nem_dim_plot <- ggplot(nem_dim, aes(y=volume_mm3, x= species, color=species, fill = species))+
   stat_boxplot(geom ='errorbar', width = 0.4, color = "black")+
   geom_boxplot(outlier.color = NA, color="black", outlier.size = NA, alpha = .2)+
   geom_jitter(size = 1, aes(color = species), alpha = .3, width = 0.3)+
@@ -152,8 +147,7 @@ nem_dim.p <- ggplot(nem_dim, aes(y=volume_mm3, x= species, color=species, fill =
   facet_wrap(~cell_type, scales = "free")+
   xlab("Species")+
   ylab(label = expression("Volume ["~"mm"^"-3"~"]"))
-nem_dim.p
 
-ggsave(filename = "nematocysts.pdf", plot = nem_dim.p, device = "pdf",
+ggsave(filename = "results/plot_volume_per_nematocysts.pdf", plot = nem_dim_plot, device = "pdf",
        width = 18, height = 6 , units = "cm")
 ```
