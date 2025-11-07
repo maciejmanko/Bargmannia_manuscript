@@ -1,3 +1,7 @@
+# Windows files
+desktop.ini
+Thumbs.db
+
 # Rstudio data
 .Rproj.user
 .Rhistory

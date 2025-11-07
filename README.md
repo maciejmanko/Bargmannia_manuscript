@@ -5,13 +5,13 @@ This repository contains code, data andr results for the upcoming paper on the b
 ## data
 
 Data files needed to run R code:
-bargmannia_dataset - information on examined specimens and published data on _Bargmannia_
-Bargmannia_master_tree.nex.treefile - _Bargmannia_ phylogeny based on nuclear and mitochondrial markers
-Bargmannia_subfiled - MBARI's ROV observations of _Bargmannia_
-GBIF_occurence - _Bargmannia_ data retrieved from GBIF
-landmark_positions.tps - TPS file with nectophore landmark positions
-morphometrics_meta_data - metadata associated with TPS file (specimen identity)
-OBIS_occurence - _Bargmannia_ data retrieved from OBIS
+- 'bargmannia_dataset' - information on examined specimens and published data on _Bargmannia_*
+- 'Bargmannia_master_tree.nex.treefile' - _Bargmannia_ phylogeny based on nuclear and mitochondrial markers*
+- 'Bargmannia_subfiled' - MBARI's ROV observations of _Bargmannia_*
+- 'GBIF_occurence' - _Bargmannia_ data retrieved from GBIF*
+- 'landmark_positions.tps' - TPS file with nectophore landmark positions*
+- 'morphometrics_meta_data' - metadata associated with TPS file (specimen identity)*
+- 'OBIS_occurence' - _Bargmannia_ data retrieved from OBIS*
 
 ## results
 
