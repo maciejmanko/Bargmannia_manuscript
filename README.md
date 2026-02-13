@@ -1,6 +1,6 @@
 # _Bargmannia_ manuscript 2025
 
-This repository contains code, data andr results for the upcoming paper on the biodiversity of _Bargmannia_ siphonophores. 
+This repository contains code, data and results for the upcoming paper on the biodiversity of _Bargmannia_ siphonophores. 
 
 ## data
 
